@@ -1,3 +1,4 @@
+// check out: https://frappe.io/charts/docs
 Vue.view("frappe-chart", {
 	props: {
 		page: {
@@ -15,6 +16,26 @@ Vue.view("frappe-chart", {
 		edit: {
 			type: Boolean,
 			required: true
+		}
+	},
+	computed: {
+		hasBar: function() {
+			return this.cell.state.datasets && this.cell.state.datasets.filter(function(x) {
+				return x.type == "bar";
+			}).length >= 1;
+		},
+		hasMultipleBars: function() {
+			return this.cell.state.datasets && this.cell.state.datasets.filter(function(x) {
+				return x.type == "bar";
+			}).length >= 2;
+		},
+		hasLines: function() {
+			return this.cell.state.datasets && this.cell.state.datasets.filter(function(x) {
+				return x.type == "line";
+			}).length >= 1;
+		},
+		type: function() {
+			return !this.cell.state.type ? "mixed" : this.cell.state.type;
 		}
 	},
 	data: function() {
@@ -90,20 +111,37 @@ Vue.view("frappe-chart", {
 			var self = this;
 			if (this.records.length) {
 				var parameters = {
-					type: "axis-mixed",
-					datasets: [],
+					type: this.type == "mixed" ? "axis-mixed" : this.type,
+					data: {
+						datasets: []
+					},
 					colors: [],
 					tooltipOptions: {
-						formatTooltipX: function(d, i) { console.log("formatting tooltip X", d, i); return d },
-						formatTooltipY: function(d, i) { console.log("formatting tooltip Y", d, i); return d }
-					}
+						formatTooltipX: function(d) { return d },
+						formatTooltipY: function(d) {
+							// we have a float, round it
+							if (typeof(d) == "number" && parseInt(d) != d) {
+								return self.$services.formatter.number(d, 2);
+							}
+							else if (typeof(d) == "string" && d.match && d.match(/^[0-9]+$/)) {
+								return parseInt(d);
+							}
+							else if (typeof(d) == "string" && d.match && d.match(/^[0-9.]+$/)) {
+								return parseFloat(d);
+							}
+							return d;
+						}
+					},
+					barOptions: {},
+					lineOptions: {},
+					axisOptions: {}
 				};
 				if (self.cell.state.title) {
 					parameters.title = this.$services.page.translate(self.cell.state.title);
 				}
 				// if we have a label field, use that
 				if (this.cell.state.label) {
-					parameters.labels = this.records.map(function(x) {
+					parameters.data.labels = this.records.map(function(x) {
 						var value = self.$services.page.getValue(x, self.cell.state.label);
 						if (self.cell.state.labelFormat) {
 							value = self.$services.formatter.format(value, self.cell.state.labelFormat);
@@ -113,7 +151,7 @@ Vue.view("frappe-chart", {
 				}
 				if (this.cell.state.datasets && this.cell.state.datasets.length) {
 					this.cell.state.datasets.forEach(function(x) {
-						parameters.datasets.push({
+						parameters.data.datasets.push({
 							name: self.$services.page.translate(x.name),
 							chartType: x.type ? x.type : 'line',
 							values: self.records.map(function(y) {
@@ -127,9 +165,43 @@ Vue.view("frappe-chart", {
 						parameters.colors.push(x.color ? x.color : self.$services.page.getNameColor(x.name ? x.name : "unnamed" + Math.random()));
 					});
 				}
-				console.log("drawing with", parameters);
-				var chart = new frappe.Chart(this.$el, {data:parameters});
+				if (this.cell.state.stackBars) {
+					parameters.barOptions.stacked = 1;
+				}
+				if (this.cell.state.valuesOverPoints) {
+					parameters.valuesOverPoints = 1;
+				}
+				if (this.cell.state.hideDots) {
+					parameters.lineOptions.hideDots = 1;
+				}
+				if (this.cell.state.hideLine) {
+					parameters.lineOptions.hideLine = 1;
+				}
+				if (this.cell.state.regionFill) {
+					parameters.lineOptions.regionFill = 1;
+				}
+				if (this.cell.state.xIsSeries) {
+					parameters.axisOptions.xIsSeries = true;
+				}
+				if (this.cell.state.spaceRatio) {
+					parameters.barOptions.spaceRatio = parseFloat(this.cell.state.spaceRatio);
+				}
+				if (this.cell.state.dotSize) {
+					parameters.lineOptions.dotSize = parseInt(this.cell.state.dotSize);
+				}
+				if (this.cell.state.navigable) {
+					parameters.isNavigable = this.cell.state.navigable;
+				}
+				if (this.cell.state.maxSlices) {
+					parameters.maxSlices = parseInt(this.cell.state.maxSlices);
+				}
+				if (this.cell.state.height) {
+					parameters.height = parseInt(this.cell.state.height);
+				}
+				var chart = new frappe.Chart(this.$el, parameters);
 //				chart.export();
+				// update the entire data set (only data? not settings etc)
+//				chart.update(data);
 			}
 		}
 	}
