@@ -1,0 +1,20 @@
+{
+	"name": "web-component-frappe", 
+	"resources": {
+		"frappe-charts.min.js": {
+			"url": "https://raw.githubusercontent.com/frappe/charts/master/dist/frappe-charts.min.iife.js"
+		},
+		"frappe-charts.min.css": {
+			"url": "https://raw.githubusercontent.com/frappe/charts/master/dist/frappe-charts.min.css"
+		},
+		"frappe.scss": {
+			"url": "frappe.scss"
+		}, 
+		"frappe.js": {
+			"url": "frappe.js"
+		}, 
+		"frappe.tpl": {
+			"url": "frappe.tpl"
+		}
+	}
+}
