@@ -2,7 +2,7 @@
 Vue.view("frappe-chart", {
 	category: "Charts",
 	name: "Frappe Chart",
-	description: "Use this versatile frappe plugin to can draw bar, line, pie...",
+	description: "Use this versatile frappe plugin to draw bar, line, pie and percent charts.",
 	icon: "images/components/frappe-logo.png",
 	props: {
 		page: {
