@@ -1,5 +1,9 @@
 // check out: https://frappe.io/charts/docs
 Vue.view("frappe-chart", {
+	category: "Charts",
+	name: "Frappe Chart",
+	description: "Use this versatile frappe plugin to can draw bar, line, pie...",
+	icon: "images/components/frappe-logo.png",
 	props: {
 		page: {
 			type: Object,
@@ -150,7 +154,19 @@ Vue.view("frappe-chart", {
 					});
 				}
 				if (this.cell.state.datasets && this.cell.state.datasets.length) {
-					this.cell.state.datasets.forEach(function(x) {
+					var datasets = [];
+					nabu.utils.arrays.merge(datasets, this.cell.state.datasets);
+					// we want to draw bar charts first, otherwise they provide an offset for the line charts (check out frappe documentation)
+					datasets.sort(function(a, b) {
+						if (a.type == "bar" && b.type != "bar") {
+							return -1;
+						}
+						else if (b.type == "bar" && a.type != "bar") {
+							return 1;
+						}
+						return 0;
+					});
+					datasets.forEach(function(x) {
 						parameters.data.datasets.push({
 							name: self.$services.page.translate(x.name),
 							chartType: x.type ? x.type : 'line',
@@ -202,6 +218,40 @@ Vue.view("frappe-chart", {
 //				chart.export();
 				// update the entire data set (only data? not settings etc)
 //				chart.update(data);
+			}
+		}
+	},
+	watch: {
+		'cell.state.operation': function(newValue) {
+			if (newValue) {
+				if (!this.cell.state.type) {
+					this.cell.state.type = "mixed";
+				}
+				if (!this.cell.state.label) {
+					var self = this;
+					var definition = this.$services.data.getDefinition(this.cell.state.operation);
+					Object.keys(definition).forEach(function(key) {
+						if (!self.cell.state.label && (definition[key].type == "string" || !definition[key].type)) {
+							self.cell.state.label = key;
+						}
+					});
+				}
+				if (!this.cell.state.datasets.length) {
+					var self = this;
+					var definition = this.$services.data.getDefinition(this.cell.state.operation);
+					Object.keys(definition).forEach(function(key) {
+						if (definition[key].type == "number" || definition[key].format == "int32" || definition[key].format == "int64" || !definition[key].type) {
+							var dataset = {
+								type: "line",
+								valueFormat: {}
+							};
+							dataset.value = key;
+							dataset.name = key;
+							self.cell.state.datasets.push(dataset);
+						}
+					});
+				}
+				this.execute().then(this.draw);
 			}
 		}
 	}

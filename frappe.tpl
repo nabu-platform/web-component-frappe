@@ -1,6 +1,6 @@
 <template id="frappe-chart">
 	<div class="frappe-chart"><n-sidebar class="settings" v-if="configuring == true" :inline="true" @close="configuring = false; draw()">
-		<n-collapsible title="Chart Data">
+		<n-collapsible title="Chart Data" class="padded">
 			<h2>Data<span class="subscript">Determine where you will get your data from</span></h2>
 			<n-form-combo label="Operation" v-model="cell.state.operation" 
 				:formatter="function(x) { return x.id }"
@@ -12,7 +12,7 @@
 			<n-form-combo v-model="cell.state.type" label="Chart Type" info="The type of chart you want to create. If you want to create a line and/or bar chart, use the mixed option" :items="['mixed', 'pie', 'percentage']" @input="draw"/>
 			<n-form-text v-model="cell.state.height" label="Chart height (in px)" info="The default height is 240" @input="draw"/>
 		</n-collapsible>
-		<n-collapsible title="Chart Content" v-if="cell.state.operation">
+		<n-collapsible title="Chart Content" v-if="cell.state.operation" class="padded">
 			<n-form-combo v-model="cell.state.label" label="Label Field" :filter="getKeys" @input="draw"/>
 			<page-formatted-configure v-if="cell.state.label" :fragment="cell.state.labelFormat" :page="page" :cell="cell" @input="draw"/>
 			
@@ -41,5 +41,13 @@
 				<span class="fa fa-times" @click="cell.state.datasets.splice(i, 1); draw()"></span>
 			</div>
 		</n-collapsible>
-	</n-sidebar></div>
+	</n-sidebar><div class="page-startup-wizard" v-if="edit && !cell.state.operation">
+			<div class="step">
+				<h2 class="title">Choose a data source</h2>
+				<n-form-combo label="Operation" v-model="cell.state.operation" 
+					:formatter="function(x) { return x.id }"
+					:extracter="function(x) { return x.id }"
+					:filter="$services.data.getDataOperations"/>
+			</div>
+		</div></div>
 </template>
