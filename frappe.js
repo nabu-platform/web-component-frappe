@@ -80,34 +80,40 @@ Vue.view("frappe-chart", {
 			var promise = this.$services.q.defer();
 			var self = this;
 			var pageInstance = self.$services.page.getPageInstance(self.page, self);
-			if (this.cell.state.operation) {
-				// any input parameters
-				var parameters = {};
-				if (this.cell.bindings) {
-					Object.keys(this.cell.bindings).forEach(function(key) {
-						if (self.cell.bindings[key]) {
-							parameters[key] = self.$services.page.getBindingValue(pageInstance, self.cell.bindings[key], self);
-						}
-					});
-				}
-				this.$services.data.execute(this.cell.state.operation, parameters).then(function(result) {
-					if (result) {
-						if (!(result instanceof Array)) {
-							Object.keys(result).forEach(function(x) {
-								if (result[x] instanceof Array) {
-									result = result[x];
-								}
-							});
-						}
-						if (result instanceof Array) {
-							nabu.utils.arrays.merge(self.records, result);
-							promise.resolve(result);
-						}
+			try {
+				if (this.cell.state.operation) {
+					// any input parameters
+					var parameters = {};
+					if (this.cell.bindings) {
+						Object.keys(this.cell.bindings).forEach(function(key) {
+							if (self.cell.bindings[key]) {
+								parameters[key] = self.$services.page.getBindingValue(pageInstance, self.cell.bindings[key], self);
+							}
+						});
 					}
-				}, promise);
+					this.$services.data.execute(this.cell.state.operation, parameters).then(function(result) {
+						if (result) {
+							if (!(result instanceof Array)) {
+								Object.keys(result).forEach(function(x) {
+									if (result[x] instanceof Array) {
+										result = result[x];
+									}
+								});
+							}
+							if (result instanceof Array) {
+								nabu.utils.arrays.merge(self.records, result);
+								promise.resolve(result);
+							}
+						}
+					}, promise);
+				}
+				else {
+					promise.resolve();
+				}
 			}
-			else {
-				promise.resolve();
+			catch (exception) {
+				console.error("Could not run operation", exception);
+				promise.reject();
 			}
 			return promise;
 		},
