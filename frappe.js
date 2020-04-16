@@ -138,7 +138,15 @@ window.addEventListener("load", function () {
 						},
 						colors: [],
 						tooltipOptions: {
-							formatTooltipX: function(d) { return d },
+							formatTooltipX: function(d) {
+								if (self.cell.state.popupLabelFormat) {
+									var cloned = nabu.utils.objects.clone(self.cell.state.popupLabelFormat);
+									cloned.state = null;
+									cloned.$value = self.$value;
+									d = self.$services.formatter.format(d, cloned);
+								}
+								return d;
+							},
 							formatTooltipY: function(d) {
 								// we have a float, round it
 								if (typeof(d) == "number" && parseInt(d) != d) {
@@ -165,7 +173,11 @@ window.addEventListener("load", function () {
 						parameters.data.labels = this.records.map(function(x) {
 							var value = self.$services.page.getValue(x, self.cell.state.label);
 							if (self.cell.state.labelFormat) {
-								value = self.$services.formatter.format(value, self.cell.state.labelFormat);
+								// want to add the state
+								var cloned = nabu.utils.objects.clone(self.cell.state.labelFormat);
+								cloned.state = x;
+								cloned.$value = self.$value;
+								value = self.$services.formatter.format(value, cloned);
 							}
 							return value;
 						});
@@ -247,6 +259,9 @@ window.addEventListener("load", function () {
 			}
 		},
 		watch: {
+			'records': function() {
+				this.draw();	
+			},
 			'cell.state.operation': function(newValue) {
 				if (newValue) {
 					if (!this.cell.state.type) {

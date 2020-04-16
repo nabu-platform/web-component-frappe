@@ -13,11 +13,19 @@
 			:updatable="true"
 			:paging="paging"
 			:filters="filters"
+			:supports-global-styling="true"
+			:supports-record-styling="false"
+			:supports-fields="false"
 			@refresh="refresh">
 
 			<n-collapsible slot="settings" title="Chart Content" class="padded">
 				<n-form-combo v-model="cell.state.label" label="Label Field" :filter="getKeys" @input="draw"/>
-				<page-formatted-configure v-if="cell.state.label" :fragment="cell.state.labelFormat" :page="page" :cell="cell" @input="draw"/>
+				<div v-if="cell.state.label">
+					<label>Label format</label>
+					<page-formatted-configure :fragment="cell.state.labelFormat" :page="page" :cell="cell" @input="draw"/>
+					<label>Popup label format</label>
+					<page-formatted-configure :fragment="cell.state.popupLabelFormat" :page="page" :cell="cell" @input="draw"/>
+				</div>
 				
 				<n-form-text v-model="cell.state.maxSlices" v-if="type == 'pie'" label="Max amount of slices" @input="draw"/>
 				
@@ -45,7 +53,7 @@
 				</div>
 			</n-collapsible>
 		</data-common-header>
-		<div ref="chart"></div>
+		<div ref="chart" :class="$services.page.getDynamicClasses(cell.state.globalStyles, {record:record}, $self)"></div>
 		<data-common-footer :page="page" :parameters="parameters" :cell="cell" 
 			:edit="edit"
 			:records="records"
