@@ -1,0 +1,27 @@
+{
+	"name": "web-component-frappe-gantt", 
+	"resources": {
+		"images": {
+			"components": {
+				"frappe-logo.png": {
+					"url": "frappe-logo.png"
+				}
+			}
+		},
+		"frappe-gantt.js": {
+			"url": "https://raw.githubusercontent.com/frappe/gantt/master/dist/frappe-gantt.js"
+		},
+		"frappe-gantt.css": {
+			"url": "https://raw.githubusercontent.com/frappe/gantt/master/dist/frappe-gantt.css"
+		},
+		"frappe.scss": {
+			"url": "frappe.scss"
+		}, 
+		"frappe.js": {
+			"url": "frappe.js"
+		}, 
+		"frappe.tpl": {
+			"url": "frappe.tpl"
+		}
+	}
+}

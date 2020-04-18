@@ -291,7 +291,7 @@ window.addEventListener("load", function () {
 							}
 						});
 					}
-					this.execute().then(this.draw);
+					this.load().then(this.draw);
 				}
 			}
 		}
