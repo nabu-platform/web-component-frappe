@@ -1,5 +1,5 @@
 window.addEventListener("load", function () {
-	// check out: https://frappe.io/charts/docs
+	// check out: https://frappe.io/gantt
 	Vue.view("frappe-gantt", {
 		mixins: [nabu.page.views.data.DataCommon],
 		category: "Charts",
