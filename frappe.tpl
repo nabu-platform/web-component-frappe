@@ -53,7 +53,7 @@
 				</div>
 			</n-collapsible>
 		</data-common-header>
-		<div ref="chart" :class="$services.page.getDynamicClasses(cell.state.globalStyles, {record:record}, $self)"></div>
+		<div ref="chart" :class="$services.page.getDynamicClasses(cell.state.globalStyles, {}, $self)"></div>
 		<data-common-footer :page="page" :parameters="parameters" :cell="cell" 
 			:edit="edit"
 			:records="records"

@@ -8,6 +8,9 @@
 				}
 			}
 		},
+		"polyfill.js": {
+			"url": "polyfill.js"
+		},
 		"frappe-charts.min.js": {
 			"url": "https://raw.githubusercontent.com/frappe/charts/master/dist/frappe-charts.min.iife.js"
 		},

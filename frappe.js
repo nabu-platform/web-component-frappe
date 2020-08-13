@@ -130,7 +130,7 @@ window.addEventListener("load", function () {
 			},
 			draw: function() {
 				var self = this;
-				if (this.records.length) {
+				if (this.records.length && this.$refs.chart) {
 					var parameters = {
 						type: this.type == "mixed" ? "axis-mixed" : this.type,
 						data: {
