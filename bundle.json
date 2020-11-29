@@ -12,10 +12,10 @@
 			"url": "polyfill.js"
 		},
 		"frappe-charts.min.js": {
-			"url": "https://raw.githubusercontent.com/frappe/charts/master/dist/frappe-charts.min.iife.js"
+			"url": "https://cdn.jsdelivr.net/npm/frappe-charts@1.5.3/dist/frappe-charts.min.iife.js"
 		},
 		"frappe-charts.min.css": {
-			"url": "https://raw.githubusercontent.com/frappe/charts/master/dist/frappe-charts.min.css"
+			"url": "https://cdn.jsdelivr.net/npm/frappe-charts@1.5.3/dist/frappe-charts.min.css"
 		},
 		"frappe.scss": {
 			"url": "frappe.scss"

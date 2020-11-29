@@ -67,3 +67,61 @@
 	</div>
 </template>
 
+<template id="frappe-aggregate-chart">
+	<div class="frappe-aggregate-chart">
+		
+		<data-common-header :page="page" :parameters="parameters" :cell="cell"
+			:edit="edit"
+			:records="records"
+			:selected="selected"
+			:inactive="inactive"
+			@updatedEvents="$emit('updatedEvents')"
+			@close="$emit('close'); configuring=false"
+			:multiselect="true"
+			:configuring="configuring"
+			:updatable="true"
+			:paging="paging"
+			:filters="filters"
+			:supports-global-styling="true"
+			:supports-record-styling="false"
+			:supports-fields="false"
+			@refresh="refresh">
+
+			<n-collapsible slot="settings" title="Chart Content" class="padded">
+				<n-form-combo v-model="cell.state.label" label="Label Field" :filter="getKeys" @input="draw"/>
+				<div v-if="cell.state.label">
+					<label>Label format</label>
+					<page-formatted-configure :fragment="cell.state.labelFormat" :page="page" :cell="cell" @input="draw"/>
+					<label>Popup label format</label>
+					<page-formatted-configure :fragment="cell.state.popupLabelFormat" :page="page" :cell="cell" @input="draw"/>
+				</div>
+				
+				<n-form-text v-model="cell.state.maxSlices" v-if="cell.state.type == 'pie'" label="Max amount of slices" @input="draw"/>
+				
+				<n-form-switch v-model="cell.state.navigable" label="Navigable" @input="draw"/>
+				<h2>Data Sets<span class="subscript">Choose the field you want to use</span></h2>
+				<n-form-text v-model="cell.state.dataset.name" label="Name" @input="draw"/>
+				<n-form-combo v-model="cell.state.type" :items="['pie', 'percentage', 'donut']" label="Type" @input="draw"/>
+				<n-form-text v-model="cell.state.dataset.color" label="Color" type="color" @input="draw"/>
+				<n-form-combo v-model="cell.state.dataset.value" label="Value Field" 
+					:filter="getKeys" @input="draw"/>
+				<n-form-text v-model="cell.state.dataset.barHeight" v-if="cell.state.type == 'percent'" label="Bar Height"/>
+				<n-form-text v-model="cell.state.dataset.barDepth" v-if="cell.state.type == 'percent'" label="Bar Depth"/>
+				<page-formatted-configure v-if="cell.state.dataset.value" :fragment="cell.state.dataset.valueFormat" :page="page" :cell="cell" @input="draw"/>
+			</n-collapsible>
+		</data-common-header>
+		<div ref="chart" :class="$services.page.getDynamicClasses(cell.state.globalStyles, {}, $self)"></div>
+		<data-common-footer :page="page" :parameters="parameters" :cell="cell" 
+			:edit="edit"
+			:records="records"
+			:selected="selected"
+			:inactive="inactive"
+			:global-actions="globalActions"
+			@updatedEvents="$emit('updatedEvents')"
+			@close="$emit('close')"
+			:multiselect="true"
+			:updatable="true"/>
+	</div>
+</template>
+
+

@@ -1,11 +1,29 @@
+// distribution from: https://cdn.jsdelivr.net/npm/frappe-charts@1.5.3/dist/
+
 window.addEventListener("load", function () {
+	var accept = function(type, value) {
+		if (type == "operation") {
+			return application.services.dataUtils.getDataOperations().map(function(x) { return x.id }).indexOf(value) >= 0;
+		}
+	};
+	var initialize = function(type, value, component, cell, row, page) {
+		component.updateOperation(value);
+		var name = application.services.page.guessNameFromOperation(value);
+		if (name != null) {
+			name = name.substring(0, 1).toUpperCase() + name.substring(1);
+			cell.state.title = name;
+		}
+	};
+	
 	// check out: https://frappe.io/charts/docs
 	Vue.view("frappe-chart", {
 		mixins: [nabu.page.views.data.DataCommon],
 		category: "Charts",
 		name: "Frappe Chart",
-		description: "Use this versatile frappe plugin to draw bar, line, pie and percent charts.",
+		description: "Use this versatile frappe plugin to draw bar and line charts.",
 		icon: "images/components/frappe-logo.png",
+		accept: accept,
+		init: initialize,
 		props: {
 			page: {
 				type: Object,
@@ -282,7 +300,7 @@ window.addEventListener("load", function () {
 						Object.keys(definition).forEach(function(key) {
 							if (definition[key].type == "number" || definition[key].format == "int32" || definition[key].format == "int64" || !definition[key].type) {
 								var dataset = {
-									type: "line",
+									type: "bar",
 									valueFormat: {}
 								};
 								dataset.value = key;
@@ -296,7 +314,213 @@ window.addEventListener("load", function () {
 			}
 		}
 	});
+	
+	// check out: https://frappe.io/charts/docs
+	Vue.view("frappe-aggregate-chart", {
+		mixins: [nabu.page.views.data.DataCommon],
+		category: "Charts",
+		name: "Frappe Aggregate Chart",
+		description: "Use this versatile frappe plugin to pie, donut and percent charts.",
+		icon: "images/components/frappe-logo.png",
+		accept: accept,
+		init: initialize,
+		props: {
+			page: {
+				type: Object,
+				required: true
+			},
+			parameters: {
+				type: Object,
+				required: false
+			},
+			cell: {
+				type: Object,
+				required: true
+			},
+			edit: {
+				type: Boolean,
+				required: true
+			}
+		},
+		data: function() {
+			return {
+				configuring: false
+			}
+		},
+		beforeDestroy: function() {
+			this.$services.page.destroy(this);
+		},
+		created: function() {
+			this.create();
+			if (!this.cell.state.bindings) {
+				Vue.set(this.cell.state, "bindings", {});
+			}
+			if (!this.cell.state.dataset) {
+				Vue.set(this.cell.state, "dataset", {valueFormat: {}});
+			}
+			if (!this.cell.state.labelFormat) {
+				Vue.set(this.cell.state, "labelFormat", {});
+			}
+		},
+		activate: function(done) {
+			var self = this;
+			this.activate(function() {
+				done();
+			}, done);
+		},
+		ready: function() {
+			this.draw();
+		},
+		methods: {
+			configure: function() {
+				this.configuring = true;	
+			},
+			getKeys: function(name) {
+				return this.keys.filter(function(x) {
+					return !name || x.toLowerCase().indexOf(name.toLowerCase()) >= 0;
+				});
+				var keys = this.cell.state.operation ? this.$services.page.getSimpleKeysFor({properties:this.$services.data.getDefinition(this.cell.state.operation)}) : [];
+				if (name) {
+					keys = keys.filter(function(x) { return x.toLowerCase().indexOf(name.toLowerCase()) >= 0 });
+				}
+				return keys;
+			},
+			draw: function() {
+				var self = this;
+				if (this.records.length && this.$refs.chart) {
+					var parameters = {
+						type: this.cell.state.type ? this.cell.state.type : "pie",
+						data: {
+							datasets: []
+						},
+						colors: [],
+						tooltipOptions: {
+							formatTooltipX: function(d) {
+								if (self.cell.state.popupLabelFormat) {
+									var cloned = nabu.utils.objects.clone(self.cell.state.popupLabelFormat);
+									cloned.state = null;
+									cloned.$value = self.$value;
+									d = self.$services.formatter.format(d, cloned);
+								}
+								return d;
+							},
+							formatTooltipY: function(d) {
+								// we have a float, round it
+								if (typeof(d) == "number" && parseInt(d) != d) {
+									return self.$services.formatter.number(d, 2);
+								}
+								else if (typeof(d) == "string" && d.match && d.match(/^[0-9]+$/)) {
+									return parseInt(d);
+								}
+								else if (typeof(d) == "string" && d.match && d.match(/^[0-9.]+$/)) {
+									return parseFloat(d);
+								}
+								return d;
+							}
+						},
+						barOptions: {},
+						lineOptions: {},
+						axisOptions: {}
+					};
+					if (self.cell.state.title) {
+						parameters.title = this.$services.page.translate(self.cell.state.title);
+					}
+					// if we have a label field, use that
+					if (this.cell.state.label) {
+						parameters.data.labels = this.records.map(function(x) {
+							var value = self.$services.page.getValue(x, self.cell.state.label);
+							if (self.cell.state.labelFormat) {
+								// want to add the state
+								var cloned = nabu.utils.objects.clone(self.cell.state.labelFormat);
+								cloned.state = x;
+								cloned.$value = self.$value;
+								value = self.$services.formatter.format(value, cloned);
+							}
+							return value;
+						});
+					}
+					if (this.cell.state.dataset) {
+						var datasets = [];
+						datasets.push(this.cell.state.dataset);
+						datasets.forEach(function(x) {
+							var hasData = false;
+							var values = self.records.map(function(y) {
+								var value = self.$services.page.getValue(y, x.value);
+								if (x.format) {
+									value = self.$services.formatter.format(value, x.format);
+								}
+								if (value != null) {
+									hasData = true;
+								}
+								return value == null ? 0 : value;
+							});
+							console.log("data is", self.records, values, x.value);
+							if (hasData) {
+								parameters.data.datasets.push({
+									name: self.$services.page.translate(x.name),
+									values: values
+								});
+								parameters.colors.push(x.color ? x.color : self.$services.page.getNameColor(x.name ? x.name : "unnamed" + Math.random()));
+							}
+						});
+					}
+					if (this.cell.state.barHeight) {
+						parameters.barOptions.height = parseInt(this.cell.state.barHeight);
+					}
+					if (this.cell.state.barDepth) {
+						parameters.barOptions.depth = parseInt(this.cell.state.barDepth);
+					}
+					if (this.cell.state.navigable) {
+						parameters.isNavigable = this.cell.state.navigable;
+					}
+					if (this.cell.state.maxSlices) {
+						parameters.maxSlices = parseInt(this.cell.state.maxSlices);
+					}
+					if (this.cell.state.height) {
+						parameters.height = parseInt(this.cell.state.height);
+					}
+					console.log("drawing", this.$refs.chart, parameters);
+					var chart = new frappe.Chart(this.$refs.chart, parameters);
+	//				chart.export();
+					// update the entire data set (only data? not settings etc)
+	//				chart.update(data);
+				}
+			}
+		},
+		watch: {
+			'records': function() {
+				this.draw();	
+			},
+			'cell.state.operation': function(newValue) {
+				if (newValue) {
+					if (!this.cell.state.type) {
+						this.cell.state.type = "pie";
+					}
+					if (!this.cell.state.label) {
+						var self = this;
+						var definition = this.$services.data.getDefinition(this.cell.state.operation);
+						Object.keys(definition).forEach(function(key) {
+							if (!self.cell.state.label && (definition[key].type == "string" || !definition[key].type)) {
+								self.cell.state.label = key;
+							}
+						});
+					}
+					var self = this;
+					var definition = this.$services.data.getDefinition(this.cell.state.operation);
+					Object.keys(definition).forEach(function(key) {
+						if (definition[key].type == "number" || definition[key].format == "int32" || definition[key].format == "int64" || !definition[key].type) {
+							var dataset = self.cell.state.dataset;
+							dataset.value = key;
+							dataset.name = key;
+						}
+					});
+					this.load().then(this.draw);
+				}
+			}
+		}
+	});
 });
+
 
 
 
