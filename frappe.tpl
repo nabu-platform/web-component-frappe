@@ -110,7 +110,7 @@
 				<page-formatted-configure v-if="cell.state.dataset.value" :fragment="cell.state.dataset.valueFormat" :page="page" :cell="cell" @input="draw"/>
 			</n-collapsible>
 		</data-common-header>
-		<div ref="chart" :class="$services.page.getDynamicClasses(cell.state.globalStyles, {}, $self)"></div>
+		<div ref="chart" class="chart-container-parent" :class="$services.page.getDynamicClasses(cell.state.globalStyles, {}, $self)"></div>
 		<data-common-footer :page="page" :parameters="parameters" :cell="cell" 
 			:edit="edit"
 			:records="records"

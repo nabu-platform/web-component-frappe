@@ -1,29 +1,10 @@
 // distribution from: https://cdn.jsdelivr.net/npm/frappe-charts@1.5.3/dist/
 
 window.addEventListener("load", function () {
-	var accept = function(type, value) {
-		if (type == "operation") {
-			return application.services.dataUtils.getDataOperations().map(function(x) { return x.id }).indexOf(value) >= 0;
-		}
-	};
-	var initialize = function(type, value, component, cell, row, page) {
-		component.updateOperation(value);
-		var name = application.services.page.guessNameFromOperation(value);
-		if (name != null) {
-			name = name.substring(0, 1).toUpperCase() + name.substring(1);
-			cell.state.title = name;
-		}
-	};
-	
 	// check out: https://frappe.io/charts/docs
-	Vue.view("frappe-chart", {
+	Vue.component("frappe-chart", {
+		template: "#frappe-chart",
 		mixins: [nabu.page.views.data.DataCommon],
-		category: "Charts",
-		name: "Frappe Chart",
-		description: "Use this versatile frappe plugin to draw bar and line charts.",
-		icon: "images/components/frappe-logo.png",
-		accept: accept,
-		init: initialize,
 		props: {
 			page: {
 				type: Object,
@@ -184,7 +165,8 @@ window.addEventListener("load", function () {
 						axisOptions: {}
 					};
 					if (self.cell.state.title) {
-						parameters.title = this.$services.page.translate(self.cell.state.title);
+						// we now do the title in data common
+						//parameters.title = this.$services.page.translate(self.cell.state.title);
 					}
 					// if we have a label field, use that
 					if (this.cell.state.label) {
@@ -316,14 +298,9 @@ window.addEventListener("load", function () {
 	});
 	
 	// check out: https://frappe.io/charts/docs
-	Vue.view("frappe-aggregate-chart", {
+	Vue.component("frappe-aggregate-chart", {
+		template: "#frappe-aggregate-chart",
 		mixins: [nabu.page.views.data.DataCommon],
-		category: "Charts",
-		name: "Frappe Aggregate Chart",
-		description: "Use this versatile frappe plugin to pie, donut and percent charts.",
-		icon: "images/components/frappe-logo.png",
-		accept: accept,
-		init: initialize,
 		props: {
 			page: {
 				type: Object,
@@ -423,7 +400,8 @@ window.addEventListener("load", function () {
 						axisOptions: {}
 					};
 					if (self.cell.state.title) {
-						parameters.title = this.$services.page.translate(self.cell.state.title);
+						// we now do the title in data common
+						// parameters.title = this.$services.page.translate(self.cell.state.title);
 					}
 					// if we have a label field, use that
 					if (this.cell.state.label) {
@@ -496,8 +474,9 @@ window.addEventListener("load", function () {
 					if (!this.cell.state.type) {
 						this.cell.state.type = "pie";
 					}
+					var self = this;
+					// we set the label value for each field
 					if (!this.cell.state.label) {
-						var self = this;
 						var definition = this.$services.data.getDefinition(this.cell.state.operation);
 						Object.keys(definition).forEach(function(key) {
 							if (!self.cell.state.label && (definition[key].type == "string" || !definition[key].type)) {
@@ -505,7 +484,6 @@ window.addEventListener("load", function () {
 							}
 						});
 					}
-					var self = this;
 					var definition = this.$services.data.getDefinition(this.cell.state.operation);
 					Object.keys(definition).forEach(function(key) {
 						if (definition[key].type == "number" || definition[key].format == "int32" || definition[key].format == "int64" || !definition[key].type) {
@@ -518,6 +496,56 @@ window.addEventListener("load", function () {
 				}
 			}
 		}
+	});
+	
+	
+	application.bootstrap(function($services) {
+		var accept = function(type, value) {
+			if (type == "operation") {
+				return $services.dataUtils.getDataOperations().map(function(x) { return x.id }).indexOf(value) >= 0;
+			}
+		};
+		var initialize = function(type, value, component, cell, row, page) {
+			component.updateOperation(value);
+			var name = $services.page.guessNameFromOperation(value);
+			if (name != null) {
+				cell.state.title = $services.page.prettify(name);
+			}
+			// increase the default limit, 10 is not enough when drawing graphs
+			cell.state.limit = 1000;
+		};
+		
+		
+		$services.router.register({
+			alias: "frappe-chart",
+			category: "Charts",
+			name: "Frappe Chart",
+			description: "Use this versatile frappe plugin to draw bar and line charts.",
+			icon: "images/components/frappe-logo.png",
+			accept: accept,
+			initialize: initialize,
+			enter: function(parameters) {
+				var component = Vue.component("frappe-chart");
+				return new component({propsData:parameters});
+			},
+			slow: true
+		});
+		
+		$services.router.register({
+			alias: "frappe-aggregate-chart",
+			category: "Charts",
+			name: "Frappe Aggregate Chart",
+			description: "Use this versatile frappe plugin to pie, donut and percent charts.",
+			icon: "images/components/frappe-logo.png",
+			accept: accept,
+			initialize: initialize,
+			enter: function(parameters) {
+				var component = Vue.component("frappe-aggregate-chart");
+				return new component({propsData:parameters});
+			},
+			slow: true
+		});
+		
 	});
 });
 
