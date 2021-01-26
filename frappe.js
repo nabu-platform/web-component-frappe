@@ -402,6 +402,16 @@ window.addEventListener("load", function () {
 							lineOptions: {},
 							axisOptions: {}
 						};
+						// there seems to be no configurable way to tell frappe to start at a certain point
+						// so we just add a marker at that point with no label, forcing frappe to take it into account
+						// note that if we pass in an empty array of yMarkers, frappe fails...
+						if (self.cell.state.minimumYValue != null && self.cell.state.minimumYValue != "") {
+							parameters.data.yMarkers = [{
+								label: "",
+								value: parseFloat(self.cell.state.minimumYValue)
+							}];
+							// also has yRegions, not relevant now
+						}
 						if (self.cell.state.title) {
 							// we now do the title in data common
 							// parameters.title = this.$services.page.translate(self.cell.state.title);

@@ -140,6 +140,7 @@
 			
 			<n-form-text v-model="cell.state.maxSlices" v-if="cell.state.type == 'pie'" label="Max amount of slices" @input="draw"/>
 			
+			<n-form-text v-model="cell.state.minimumYValue" label="Minimum Y value"/>
 			<n-form-switch v-model="cell.state.navigable" label="Navigable" @input="draw"/>
 			<h2>Data Sets<span class="subscript">Choose the field you want to use</span></h2>
 			<n-form-text v-model="cell.state.dataset.name" label="Name" @input="draw"/>
