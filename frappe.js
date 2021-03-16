@@ -601,7 +601,7 @@ window.addEventListener("load", function () {
 						}
 						var pageInstance = self.$services.page.getPageInstance(self.page, self);
 						var value = self.$services.page.getBindingValue(pageInstance, self.cell.state.value, self);
-						var max = self.cell.state.maxValue ? parseFloat(self.cell.state.maxValue) : value;
+						var max = self.cell.state.maxValue ? parseFloat(self.$services.page.interpret(self.cell.state.maxValue, self)) : value;
 						parameters.data.datasets.push({
 							name: "values-name",
 							values: [
