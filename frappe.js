@@ -165,6 +165,13 @@ window.addEventListener("load", function () {
 							lineOptions: {},
 							axisOptions: {}
 						};
+						if (self.cell.state.minimumYValue != null && self.cell.state.minimumYValue != "") {
+							parameters.data.yMarkers = [{
+								label: "",
+								value: parseFloat(self.cell.state.minimumYValue)
+							}];
+							// also has yRegions
+						}
 						if (self.cell.state.title) {
 							// we now do the title in data common
 							//parameters.title = this.$services.page.translate(self.cell.state.title);
@@ -509,11 +516,160 @@ window.addEventListener("load", function () {
 			}
 		});
 	}
+		
+	var frappePercentChartGenerator = function(name) {
+		// check out: https://frappe.io/charts/docs
+		Vue.component(name, {
+			template: "#" + name,
+			props: {
+				page: {
+					type: Object,
+					required: true
+				},
+				parameters: {
+					type: Object,
+					required: false
+				},
+				cell: {
+					type: Object,
+					required: true
+				},
+				edit: {
+					type: Boolean,
+					required: true
+				}
+			},
+			beforeDestroy: function() {
+				this.$services.page.destroy(this);
+			},
+			created: function() {
+				if (!this.cell.state.valueFormat) {
+					Vue.set(this.cell.state, "valueFormat", {});
+				}
+			},
+			ready: function() {
+				this.draw();
+			},
+			methods: {
+				configurator: function() {
+					return "frappe-percent-chart-configure";
+				},
+				getKeys: function(value) {
+					var parameters = this.$services.page.getAvailableParameters(this.page, this.cell, true);
+					var keys = this.$services.page.getSimpleKeysFor({properties:parameters});
+					return value ? keys.filter(function(x) { x.toLowerCase().indexOf(value.toLowerCase()) >= 0 }) : keys;
+				},
+				draw: function() {
+					var self = this;
+					if (this.$refs.chart) {
+						var parameters = {
+							type: "percentage",
+							data: {
+								datasets: []
+							},
+							colors: [],
+							tooltipOptions: {
+								formatTooltipX: function(d) {
+									if (self.cell.state.popupLabelFormat) {
+										var cloned = nabu.utils.objects.clone(self.cell.state.popupLabelFormat);
+										cloned.state = null;
+										cloned.$value = self.$value;
+										d = self.$services.formatter.format(d, cloned);
+									}
+									return d;
+								},
+								formatTooltipY: function(d) {
+									// we have a float, round it
+									if (typeof(d) == "number" && parseInt(d) != d) {
+										return self.$services.formatter.number(d, 2);
+									}
+									else if (typeof(d) == "string" && d.match && d.match(/^[0-9]+$/)) {
+										return parseInt(d);
+									}
+									else if (typeof(d) == "string" && d.match && d.match(/^[0-9.]+$/)) {
+										return parseFloat(d);
+									}
+									return d;
+								}
+							},
+							barOptions: {},
+							lineOptions: {},
+							axisOptions: {}
+						};
+						if (self.cell.state.title) {
+							//parameters.title = this.$services.page.translate(self.cell.state.title);
+						}
+						var pageInstance = self.$services.page.getPageInstance(self.page, self);
+						var value = self.$services.page.getBindingValue(pageInstance, self.cell.state.value, self);
+						var max = self.cell.state.maxValue ? parseFloat(self.cell.state.maxValue) : value;
+						parameters.data.datasets.push({
+							name: "values-name",
+							values: [
+								value,
+								max - value
+							]
+						});
+						parameters.data.labels = [
+							self.cell.state.label ? self.$services.page.translate(self.cell.state.label) : "Value",
+							self.cell.state.labelRemainder ? self.$services.page.translate(self.cell.state.labelRemainder) : "Remainder",
+						];
+						if (this.cell.state.barHeight) {
+							parameters.barOptions.height = parseInt(this.cell.state.barHeight);
+						}
+						if (this.cell.state.barDepth) {
+							parameters.barOptions.depth = parseInt(this.cell.state.barDepth);
+						}
+						if (this.cell.state.navigable) {
+							parameters.isNavigable = this.cell.state.navigable;
+						}
+						if (this.cell.state.height) {
+							parameters.height = parseInt(this.cell.state.height);
+						}
+						var chart = new frappe.Chart(this.$refs.chart, parameters);
+		//				chart.export();
+						// update the entire data set (only data? not settings etc)
+		//				chart.update(data);
+					}
+				}
+			},
+			watch: {
+				'records': function() {
+					this.draw();	
+				},
+				definition: function(definition) {
+					if (definition) {
+						if (!this.cell.state.type) {
+							this.cell.state.type = "pie";
+						}
+						var self = this;
+						// we set the label value for each field
+						if (!this.cell.state.label) {
+							Object.keys(definition).forEach(function(key) {
+								if (!self.cell.state.label && (definition[key].type == "string" || !definition[key].type)) {
+									self.cell.state.label = key;
+								}
+							});
+						}
+						Object.keys(definition).forEach(function(key) {
+							if (definition[key].type == "number" || definition[key].format == "int32" || definition[key].format == "int64" || !definition[key].type) {
+								var dataset = self.cell.state.dataset;
+								dataset.value = key;
+								dataset.name = key;
+							}
+						});
+						this.load().then(this.draw);
+					}
+				}
+			}
+		});
+	}
 	
 	frappeChartGenerator("frappe-chart");
 	frappeChartGenerator("frappe-chart-configure");
 	frappeAggregateChartGenerator("frappe-aggregate-chart");
 	frappeAggregateChartGenerator("frappe-aggregate-chart-configure");
+	frappePercentChartGenerator("frappe-percent-chart");
+	frappePercentChartGenerator("frappe-percent-chart-configure");
 	
 	application.bootstrap(function($services) {
 		var accept = function(type, value) {
@@ -562,6 +718,21 @@ window.addEventListener("load", function () {
 			initialize: initialize,
 			enter: function(parameters) {
 				var component = Vue.component("frappe-aggregate-chart");
+				return new component({propsData:parameters});
+			},
+			slow: true
+		});
+		
+		$services.router.register({
+			alias: "frappe-percent-chart",
+			category: "Charts",
+			name: "Frappe Percentage Chart",
+			description: "Draw a percentage chart based on a value",
+			icon: "images/components/frappe-logo.png",
+			accept: accept,
+			initialize: initialize,
+			enter: function(parameters) {
+				var component = Vue.component("frappe-percent-chart");
 				return new component({propsData:parameters});
 			},
 			slow: true

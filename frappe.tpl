@@ -1,5 +1,5 @@
 <template id="frappe-chart">
-	<div class="frappe-chart">
+	<div class="frappe-chart data-cell">
 		<data-common-header :page="page" :parameters="parameters" :cell="cell"
 			:edit="edit"
 			:records="records"
@@ -16,6 +16,7 @@
 			:supports-record-styling="false"
 			:supports-fields="false"
 			@refresh="refresh"/>
+		<div v-if="!records.length" class="no-data">{{ cell.state.emptyPlaceholder ? $services.page.translate(cell.state.emptyPlaceholder) : "%{No data available}"}}</div>
 		<div ref="chart" :class="$services.page.getDynamicClasses(cell.state.globalStyles, {}, $self)"></div>
 		<data-common-footer :page="page" :parameters="parameters" :cell="cell" 
 			:edit="edit"
@@ -31,7 +32,7 @@
 </template>
 
 <template id="frappe-aggregate-chart">
-	<div class="frappe-aggregate-chart">
+	<div class="frappe-aggregate-chart data-cell">
 		
 		<data-common-header :page="page" :parameters="parameters" :cell="cell"
 			:edit="edit"
@@ -49,6 +50,7 @@
 			:supports-record-styling="false"
 			:supports-fields="false"
 			@refresh="refresh"/>
+		<div v-if="!records.length" class="no-data">{{ cell.state.emptyPlaceholder ? $services.page.translate(cell.state.emptyPlaceholder) : "%{No data available}"}}</div>
 		<div ref="chart" class="chart-container-parent" :class="$services.page.getDynamicClasses(cell.state.globalStyles, {}, $self)"></div>
 		<data-common-footer :page="page" :parameters="parameters" :cell="cell" 
 			:edit="edit"
@@ -89,6 +91,7 @@
 			
 			<n-form-text v-model="cell.state.maxSlices" v-if="type == 'pie'" label="Max amount of slices" @input="draw"/>
 			
+			<n-form-text v-model="cell.state.minimumYValue" label="Minimum Y value"/>
 			<n-form-switch v-if="type == 'mixed'" v-model="cell.state.xIsSeries" label="Treat X-axis as series" info="When there are too many labels to show correctly and the x-axis is considered a continuous series, some labels can be left out" @input="draw"/>
 			<n-form-switch v-if="type == 'mixed'" v-model="cell.state.valuesOverPoints" label="Show values over points" @input="draw"/>
 			<n-form-switch v-model="cell.state.navigable" label="Navigable" @input="draw"/>
@@ -153,4 +156,31 @@
 			<page-formatted-configure v-if="cell.state.dataset.value" :fragment="cell.state.dataset.valueFormat" :page="page" :cell="cell" @input="draw"/>
 		</n-collapsible>
 	</data-common-configure>
+</template>
+
+
+<template id="frappe-percent-chart-configure">
+	<div class="frappe-percent-chart-configure">
+		<n-collapsible slot="settings" title="Chart Content" class="padded">
+			<n-form-text v-model="cell.state.title" label="Title" @input="draw"/>
+			<n-form-text v-model="cell.state.label" label="Label" @input="draw"/>
+			<n-form-text v-model="cell.state.labelRemainder" label="Label Remainder" @input="draw"/>
+			<n-form-switch v-model="cell.state.navigable" label="Navigable" @input="draw"/>
+			<n-form-text v-model="cell.state.color" label="Color" type="color" @input="draw"/>
+			<n-form-combo v-model="cell.state.value" label="Value Field" :filter="getKeys" @input="draw"/>
+			<n-form-text v-model="cell.state.maxValue" label="Max Value" @input="draw"/>
+			<n-form-text v-model="cell.state.barHeight" label="Bar Height"/>
+			<n-form-text v-model="cell.state.barDepth" label="Bar Depth"/>
+			<page-formatted-configure v-if="cell.state.value" :fragment="cell.state.valueFormat" :page="page" :cell="cell" @input="draw"/>
+		</n-collapsible>
+	</div>
+</template>
+
+<template id="frappe-percent-chart">
+	<div class="frappe-percent-chart data-cell data-cell">
+		<div class="data-common-header">
+			<h2 v-if="cell.state.title">{{$services.page.translate(cell.state.title)}}</h2>
+		</div>
+		<div ref="chart" class="chart-container-parent"></div>
+	</div>
 </template>
