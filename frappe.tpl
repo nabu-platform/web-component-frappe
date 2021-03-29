@@ -167,7 +167,8 @@
 			<n-form-text v-model="cell.state.labelRemainder" label="Label Remainder" @input="draw"/>
 			<n-form-switch v-model="cell.state.navigable" label="Navigable" @input="draw"/>
 			<n-form-text v-model="cell.state.color" label="Color" type="color" @input="draw"/>
-			<n-form-combo v-model="cell.state.value" label="Value Field" :filter="getKeys" @input="draw"/>
+			<n-form-combo v-model="cell.state.value" v-if="!cell.state.valueFormula" label="Value Field" :filter="getKeys" @input="draw"/>
+			<n-form-text v-model="cell.state.valueFormula" v-if="!cell.state.value" label="Value Fixed Value" @input="draw"/>
 			<n-form-text v-model="cell.state.maxValue" label="Max Value" @input="draw"/>
 			<n-form-text v-model="cell.state.barHeight" label="Bar Height"/>
 			<n-form-text v-model="cell.state.barDepth" label="Bar Depth"/>

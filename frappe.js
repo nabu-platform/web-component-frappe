@@ -207,8 +207,10 @@ window.addEventListener("load", function () {
 								var hasData = false;
 								var values = self.records.map(function(y) {
 									var value = self.$services.page.getValue(y, x.value);
-									if (x.format) {
-										value = self.$services.formatter.format(value, x.format);
+									if (x.valueFormat) {
+										var formatty = nabu.utils.objects.clone(x.valueFormat);
+										formatty.state = y;
+										value = self.$services.formatter.format(value, formatty);
 									}
 									if (value != null) {
 										hasData = true;
@@ -444,8 +446,10 @@ window.addEventListener("load", function () {
 								var hasData = false;
 								var values = self.records.map(function(y) {
 									var value = self.$services.page.getValue(y, x.value);
-									if (x.format) {
-										value = self.$services.formatter.format(value, x.format);
+									if (x.valueFormat) {
+										var formatty = nabu.utils.objects.clone(x.valueFormat);
+										formatty.state = y;
+										value = self.$services.formatter.format(value, formatty);
 									}
 									if (value != null) {
 										hasData = true;
@@ -600,7 +604,7 @@ window.addEventListener("load", function () {
 							//parameters.title = this.$services.page.translate(self.cell.state.title);
 						}
 						var pageInstance = self.$services.page.getPageInstance(self.page, self);
-						var value = self.$services.page.getBindingValue(pageInstance, self.cell.state.value, self);
+						var value = self.cell.state.valueFormula ? self.$services.page.interpret(self.cell.state.valueFormula, self) : self.$services.page.getBindingValue(pageInstance, self.cell.state.value, self);
 						var max = self.cell.state.maxValue ? parseFloat(self.$services.page.interpret(self.cell.state.maxValue, self)) : value;
 						parameters.data.datasets.push({
 							name: "values-name",
