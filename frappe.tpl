@@ -125,8 +125,8 @@
 						<n-form-text v-model="yMarker.name" label="Name" @input="draw"/>	
 						<n-form-text v-model="yMarker.from" label="From" @input="draw"/>
 						<n-form-text v-if="yMarker.from != null" v-model="yMarker.to" label="To" @input="draw"/>
-						<n-form-text v-model="yMarker.color" label="Color" @input="draw" type="color"/>
-						<n-form-text v-if="yMarker.to" v-model="yMarker.fillColor" label="Fill Color" @input="draw" type="color"/>
+						<n-form-text v-model="yMarker.color" label="Color" @input="draw"/>
+						<n-form-text v-if="yMarker.to" v-model="yMarker.fillColor" label="Fill Color" @input="draw"/>
 						<n-form-combo :items="['left', 'right']" v-model="yMarker.labelPosition" label="Label Position"/>
 						<span class="fa fa-times" @click="cell.state.yMarkers.splice(cell.state.yMarkers.indexOf(yMarker, 1)); draw()"></span>
 					</div>
