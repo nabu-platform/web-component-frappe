@@ -128,6 +128,12 @@ window.addEventListener("load", function () {
 					}
 					return promise;
 				},
+				addYMarker: function() {
+					if (!this.cell.state.yMarkers) {
+						Vue.set(this.cell.state, "yMarkers", []);
+					}	
+					this.cell.state.yMarkers.push({name: null, from: null, to: null, labelPosition: "left"});
+				},
 				draw: function() {
 					var self = this;
 					if (this.records.length && this.$refs.chart) {
@@ -171,6 +177,30 @@ window.addEventListener("load", function () {
 								value: parseFloat(self.cell.state.minimumYValue)
 							}];
 							// also has yRegions
+						}
+						if (self.cell.state.yMarkers && self.cell.state.yMarkers.length) {
+							self.cell.state.yMarkers.forEach(function(x) {
+								var yMarker = {};
+								yMarker.label = x.name ? self.$services.page.translate(self.$services.page.interpret(x.name)) : null;
+								yMarker.options = {
+									labelPos: x.labelPosition ? x.labelPosition : "left"
+								};
+								if (x.to == null || x.to == "") {
+									yMarker.value = x.from == null ? 0 : self.$services.page.interpret(x.from);
+									if (!parameters.data.yMarkers) {
+										parameters.data.yMarkers = [];
+									}
+									parameters.data.yMarkers.push(yMarker);
+								}
+								else {
+									yMarker.start = x.from == null ? 0 : self.$services.page.interpret(x.from);
+									yMarker.end = x.to == null ? 0 : self.$services.page.interpret(x.to);
+									if (!parameters.data.yRegions) {
+										parameters.data.yRegions = [];
+									}
+									parameters.data.yRegions.push(yMarker);
+								}
+							});
 						}
 						if (self.cell.state.title) {
 							// we now do the title in data common
@@ -260,11 +290,95 @@ window.addEventListener("load", function () {
 						if (this.cell.state.height) {
 							parameters.height = parseInt(this.cell.state.height);
 						}
-						console.log("drawing", this.$refs.chart, parameters);
 						var chart = new frappe.Chart(this.$refs.chart, parameters);
+						this.calculateCss();
 		//				chart.export();
 						// update the entire data set (only data? not settings etc)
 		//				chart.update(data);
+					}
+				},
+				calculateCss: function() {
+					var self = this;
+					// only watch the parent? otherwise we have to watch subtree
+					var watchIt = false;
+					// this is where the record styles are kept, check if any apply!
+					if (self.cell.state.styles && self.cell.state.styles.length > 0) {
+						self.$refs.chart.querySelectorAll("rect").forEach(function(x) {
+							var index = x.getAttribute("data-point-index");
+							if (index != null) {
+								var styles = self.getRecordStyles(self.records[parseInt(index)]);
+								if (styles != null && styles.length > 0) {
+									var existing = x.getAttribute("class");
+									if (existing == null) {
+										existing = "";
+									}
+									var addClass = function(clazz) {
+										if (!existing.match(new RegExp(" " + clazz + "( |$)"))) {
+											existing = existing + " " + clazz;
+										}
+									};
+									styles.forEach(function(y) { 
+										if (typeof(y) == "string") {
+											addClass(y);
+										}
+										// it can also be an object where each class has a boolean value indicating whether or not it should be applied
+										else {
+											Object.keys(y).forEach(function(z) {
+												if (y[z]) {
+													addClass(z);
+												}
+											});
+										}
+									});
+									watchIt = true;
+									x.setAttribute("class", existing);
+								}
+							}
+						});
+					}
+					
+					if (self.cell.state.yMarkers && self.cell.state.yMarkers.length > 0) {
+						var yMarkerOffset = self.cell.state.minimumYValue != null && self.cell.state.minimumYValue != "" ? 1 : 0;
+						var yRegionOffset = 0;
+						self.cell.state.yMarkers.forEach(function(x) {
+							var color = x.color ? self.$services.page.interpret(x.color) : null;
+							if (color != null) {
+								watchIt = true;
+							}
+							// we have a plain line
+							if (x.to == null || x.to == "") {
+								if (color != null) {
+									var markers = self.$refs.chart.querySelectorAll("g.y-markers line");
+									if (yMarkerOffset < markers.length) {
+										markers.item(yMarkerOffset).setAttribute("style", "stroke: " + color);
+									}
+								}
+								yMarkerOffset++;
+							}
+							// we have a range
+							else {
+								if (color != null) {
+									var markers = self.$refs.chart.querySelectorAll("g.y-regions rect");
+									if (yRegionOffset < markers.length) {
+										var fill = x.fillColor ? self.$services.page.interpret(x.fillColor) : color;
+										var original = markers.item(yRegionOffset).getAttribute("style");
+										original = original.replace(/fill:[^;]+/, "").replace(/stroke:[^;]+/, "");
+										markers.item(yRegionOffset).setAttribute("style", "stroke: " + color + ";fill:" + fill + "; " + original);
+									}
+								}
+								yRegionOffset++;
+							}
+						});
+					}
+					
+					if (watchIt) {
+						// watch for mutations
+						var config = { attributes: false, childList: true, subtree: true };
+						var observer = new MutationObserver(function(list, observer) {
+							self.calculateCss();
+							observer.disconnect();
+						});
+						observer.observe(this.$refs.chart, config);
 					}
 				}
 			},
@@ -456,7 +570,6 @@ window.addEventListener("load", function () {
 									}
 									return value == null ? 0 : value;
 								});
-								console.log("data is", self.records, values, x.value);
 								if (hasData) {
 									parameters.data.datasets.push({
 										name: self.$services.page.translate(x.name),
@@ -481,7 +594,6 @@ window.addEventListener("load", function () {
 						if (this.cell.state.height) {
 							parameters.height = parseInt(this.cell.state.height);
 						}
-						console.log("drawing", this.$refs.chart, parameters);
 						var chart = new frappe.Chart(this.$refs.chart, parameters);
 		//				chart.export();
 						// update the entire data set (only data? not settings etc)
