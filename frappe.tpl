@@ -88,6 +88,7 @@
 					<page-formatted-configure :fragment="cell.state.labelFormat" :page="page" :cell="cell" @input="draw"/>
 					<label>Popup label format</label>
 					<page-formatted-configure :fragment="cell.state.popupLabelFormat" :page="page" :cell="cell" @input="draw"/>
+					<n-form-switch v-model="cell.state.popupLabelFormatAdvanced" label="Advanced formatting" info="If you enable advanced formatting, you get access to the entire record"/>
 				</div>
 				
 				<n-form-text v-model="cell.state.maxSlices" v-if="type == 'pie'" label="Max amount of slices" @input="draw"/>

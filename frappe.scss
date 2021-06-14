@@ -1,3 +1,10 @@
 .legend-dataset-text {
 	font-size: 0.7rem;
 }
+
+// this is for advanced formatting of the popup title
+.graph-svg-tip {
+	.title[formatted]:after {
+		content: attr(formatted);
+	}
+}

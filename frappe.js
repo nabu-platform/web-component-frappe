@@ -63,6 +63,9 @@ window.addEventListener("load", function () {
 				if (!this.cell.state.labelFormat) {
 					Vue.set(this.cell.state, "labelFormat", {});
 				}
+				if (!this.cell.state.popupLabelFormat) {
+					Vue.set(this.cell.state, "popupLabelFormat", {});
+				}
 			},
 			activate: function(done) {
 				var self = this;
@@ -145,6 +148,11 @@ window.addEventListener("load", function () {
 							colors: [],
 							tooltipOptions: {
 								formatTooltipX: function(d) {
+									// useless without the index...
+									// if we use advanced mode, we use the post processing
+									if (self.cell.state.popupLabelFormatAdvanced) {
+										return "";
+									}
 									if (self.cell.state.popupLabelFormat) {
 										var cloned = nabu.utils.objects.clone(self.cell.state.popupLabelFormat);
 										cloned.state = null;
@@ -181,20 +189,20 @@ window.addEventListener("load", function () {
 						if (self.cell.state.yMarkers && self.cell.state.yMarkers.length) {
 							self.cell.state.yMarkers.forEach(function(x) {
 								var yMarker = {};
-								yMarker.label = x.name ? self.$services.page.translate(self.$services.page.interpret(x.name)) : null;
+								yMarker.label = x.name ? self.$services.page.translate(self.$services.page.interpret(x.name, self)) : null;
 								yMarker.options = {
 									labelPos: x.labelPosition ? x.labelPosition : "left"
 								};
 								if (x.to == null || x.to == "") {
-									yMarker.value = x.from == null ? 0 : self.$services.page.interpret(x.from);
+									yMarker.value = x.from == null ? 0 : self.$services.page.interpret(x.from, self);
 									if (!parameters.data.yMarkers) {
 										parameters.data.yMarkers = [];
 									}
 									parameters.data.yMarkers.push(yMarker);
 								}
 								else {
-									yMarker.start = x.from == null ? 0 : self.$services.page.interpret(x.from);
-									yMarker.end = x.to == null ? 0 : self.$services.page.interpret(x.to);
+									yMarker.start = x.from == null ? 0 : self.$services.page.interpret(x.from, self);
+									yMarker.end = x.to == null ? 0 : self.$services.page.interpret(x.to, self);
 									if (!parameters.data.yRegions) {
 										parameters.data.yRegions = [];
 									}
@@ -297,6 +305,7 @@ window.addEventListener("load", function () {
 		//				chart.update(data);
 					}
 				},
+				// this should only modify attributes! attribute changes are specifically not watched by the mutation observer
 				calculateCss: function() {
 					var self = this;
 					// only watch the parent? otherwise we have to watch subtree
@@ -341,7 +350,7 @@ window.addEventListener("load", function () {
 						var yMarkerOffset = self.cell.state.minimumYValue != null && self.cell.state.minimumYValue != "" ? 1 : 0;
 						var yRegionOffset = 0;
 						self.cell.state.yMarkers.forEach(function(x) {
-							var color = x.color ? self.$services.page.interpret(x.color) : null;
+							var color = x.color ? self.$services.page.interpret(x.color, self) : null;
 							if (color != null) {
 								watchIt = true;
 							}
@@ -360,7 +369,7 @@ window.addEventListener("load", function () {
 								if (color != null) {
 									var markers = self.$refs.chart.querySelectorAll("g.y-regions rect");
 									if (yRegionOffset < markers.length) {
-										var fill = x.fillColor ? self.$services.page.interpret(x.fillColor) : color;
+										var fill = x.fillColor ? self.$services.page.interpret(x.fillColor, self) : color;
 										var original = markers.item(yRegionOffset).getAttribute("style");
 										original = original.replace(/fill:[^;]+/, "").replace(/stroke:[^;]+/, "");
 										markers.item(yRegionOffset).setAttribute("style", "stroke: " + color + ";fill:" + fill + "; " + original);
@@ -371,14 +380,43 @@ window.addEventListener("load", function () {
 						});
 					}
 					
+					// allow the title of the popup to be formatted retroactively
+					if (self.cell.state.popupLabelFormat && self.cell.state.popupLabelFormatAdvanced) {
+						var popup = self.$refs.chart.querySelector("div.graph-svg-tip");
+						var index = parseInt(popup.getAttribute("data-point-index"));
+						var cloned = nabu.utils.objects.clone(self.cell.state.popupLabelFormat);
+						cloned.state = null;
+						// the full record
+						cloned.$value = self.records[index];
+						var title = popup.querySelector(".title");
+						var result = self.$services.formatter.format(self.records[index], cloned);
+						// we have to do it via attributes, otherwise the observer goes crazy
+						// we use css to inject the attribute
+						title.setAttribute("formatted", result);
+						//title.innerHTML = result;
+						watchIt = true;
+					}
+					
+					// allow the x axis to be reformatted based on the current value
+					// not used at this point
+					if (self.cell.state.xAxisFormat) {
+						watchIt = true;
+						self.$refs.chart.querySelectorAll("g.x.axis text").forEach(function(label) {
+							var cloned = nabu.utils.objects.clone(self.cell.state.xAxisFormat);
+							cloned.state = null;
+							cloned.$value = label.innerHTML;
+							label.innerHTML = self.$services.formatter.format(d, cloned);
+						});
+					}
+					
 					if (watchIt) {
 						// watch for mutations
-						var config = { attributes: false, childList: true, subtree: true };
+						var config = { attributes: false, childList: true, subtree: true, characterData: false };
 						var observer = new MutationObserver(function(list, observer) {
 							self.calculateCss();
 							observer.disconnect();
 						});
-						observer.observe(this.$refs.chart, config);
+						observer.observe(self.$refs.chart, config);
 					}
 				}
 			},
