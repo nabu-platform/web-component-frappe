@@ -82,8 +82,8 @@
 			@refresh="refresh">
 		<div slot="settings">
 			<n-collapsible title="Chart Content" class="padded">
-				<n-form-combo v-model="cell.state.label" label="Label Field" :filter="getKeys" @input="draw"/>
-				<div v-if="cell.state.label">
+				<n-form-combo v-model="cell.state.labelField" label="Label Field" :filter="getKeys" @input="draw"/>
+				<div v-if="cell.state.labelField">
 					<label>Label format</label>
 					<page-formatted-configure :fragment="cell.state.labelFormat" :page="page" :cell="cell" @input="draw"/>
 					<label>Popup label format</label>
@@ -94,6 +94,7 @@
 				<n-form-text v-model="cell.state.maxSlices" v-if="type == 'pie'" label="Max amount of slices" @input="draw"/>
 				
 				<n-form-text v-model="cell.state.minimumYValue" label="Minimum Y value"/>
+				<n-form-text v-model="cell.state.chartHeight" label="Chart Height" info="In pixels"/>
 				<n-form-switch v-if="type == 'mixed'" v-model="cell.state.xIsSeries" label="Treat X-axis as series" info="When there are too many labels to show correctly and the x-axis is considered a continuous series, some labels can be left out" @input="draw"/>
 				<n-form-switch v-if="type == 'mixed'" v-model="cell.state.valuesOverPoints" label="Show values over points" @input="draw"/>
 				<n-form-switch v-model="cell.state.navigable" label="Navigable" @input="draw"/>
@@ -152,8 +153,8 @@
 			:filters="filters"
 			@refresh="refresh">
 		<n-collapsible slot="settings" title="Chart Content" class="padded">
-			<n-form-combo v-model="cell.state.label" label="Label Field" :filter="getKeys" @input="draw"/>
-			<div v-if="cell.state.label">
+			<n-form-combo v-model="cell.state.labelField" label="Label Field" :filter="getKeys" @input="draw"/>
+			<div v-if="cell.state.labelField">
 				<label>Label format</label>
 				<page-formatted-configure :fragment="cell.state.labelFormat" :page="page" :cell="cell" @input="draw"/>
 				<label>Popup label format</label>
@@ -164,12 +165,14 @@
 			
 			<n-form-text v-model="cell.state.minimumYValue" label="Minimum Y value"/>
 			<n-form-switch v-model="cell.state.navigable" label="Navigable" @input="draw"/>
-			<h2>Data Sets<span class="subscript">Choose the field you want to use</span></h2>
-			<n-form-text v-model="cell.state.dataset.name" label="Name" @input="draw"/>
+			<h2>Data Set<span class="subscript">Choose the field you want to use</span></h2>
+			<n-form-text v-model="cell.state.dataset.name" label="Name" @input="draw" :timeout="600"/>
 			<n-form-combo v-model="cell.state.type" :items="['pie', 'percentage', 'donut']" label="Type" @input="draw"/>
 			<n-form-text v-model="cell.state.dataset.color" label="Color" type="color" @input="draw"/>
 			<n-form-combo v-model="cell.state.dataset.value" label="Value Field" 
-				:filter="getKeys" @input="draw"/>
+				:filter="getKeys" @input="draw"
+				v-if="!cell.state.dataset.groupBy"/>
+			<n-form-switch v-model="cell.state.dataset.groupBy" v-if="!cell.state.dataset.value && this.cell.state.label" label="Group the records by the label field and use the amount"/>
 			<n-form-text v-model="cell.state.dataset.barHeight" v-if="cell.state.type == 'percent'" label="Bar Height"/>
 			<n-form-text v-model="cell.state.dataset.barDepth" v-if="cell.state.type == 'percent'" label="Bar Depth"/>
 			<page-formatted-configure v-if="cell.state.dataset.value" :fragment="cell.state.dataset.valueFormat" :page="page" :cell="cell" @input="draw"/>

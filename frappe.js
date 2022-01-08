@@ -46,7 +46,9 @@ window.addEventListener("load", function () {
 			},
 			data: function() {
 				return {
-					configuring: false
+					configuring: false,
+					modifyingInternally: false,
+					chart: null
 				}
 			},
 			beforeDestroy: function() {
@@ -77,6 +79,55 @@ window.addEventListener("load", function () {
 				this.draw();
 			},
 			methods: {
+				getRecordLabel: function(record) {
+					var label = null;
+					var self = this;
+					if (this.cell.state.labelField) {
+						var label = self.$services.page.getValue(record, self.cell.state.labelField);
+						if (self.cell.state.labelFormat) {
+							// want to add the state
+							var cloned = nabu.utils.objects.clone(self.cell.state.labelFormat);
+							cloned.state = record;
+							cloned.$value = self.$value;
+							label = self.$services.formatter.format(label, cloned);
+						}
+					}
+					return label;
+				},
+				getRecordValue: function(record, dataset) {
+					var self = this;
+					var value = self.$services.page.getValue(record, dataset.value);
+					if (dataset.valueFormat) {
+						var formatty = nabu.utils.objects.clone(dataset.valueFormat);
+						formatty.state = record;
+						value = self.$services.formatter.format(value, formatty);
+					}
+					return value == null ? 0 : value;
+				},
+				pushCreate: function(record) {
+					var label = this.getRecordLabel(record);
+					var self = this;
+					if (this.cell.state.datasets && this.cell.state.datasets.length) {
+						var datasets = [];
+						nabu.utils.arrays.merge(datasets, this.cell.state.datasets);
+						// we want to draw bar charts first, otherwise they provide an offset for the line charts (check out frappe documentation)
+						datasets.sort(function(a, b) {
+							if (a.type == "bar" && b.type != "bar") {
+								return -1;
+							}
+							else if (b.type == "bar" && a.type != "bar") {
+								return 1;
+							}
+							return 0;
+						});
+						var values = datasets.map(function(x) {
+							return self.getRecordValue(record, x);
+						});
+						self.chart.addDataPoint(label, values);
+					}
+					self.modifyingInternally = true;
+					self.records.push(record);
+				},
 				configurator: function() {
 					return "frappe-chart-configure";
 				},
@@ -215,9 +266,9 @@ window.addEventListener("load", function () {
 							//parameters.title = this.$services.page.translate(self.cell.state.title);
 						}
 						// if we have a label field, use that
-						if (this.cell.state.label) {
+						if (this.cell.state.labelField) {
 							parameters.data.labels = this.records.map(function(x) {
-								var value = self.$services.page.getValue(x, self.cell.state.label);
+								var value = self.$services.page.getValue(x, self.cell.state.labelField);
 								if (self.cell.state.labelFormat) {
 									// want to add the state
 									var cloned = nabu.utils.objects.clone(self.cell.state.labelFormat);
@@ -295,10 +346,13 @@ window.addEventListener("load", function () {
 						if (this.cell.state.maxSlices) {
 							parameters.maxSlices = parseInt(this.cell.state.maxSlices);
 						}
-						if (this.cell.state.height) {
+						if (this.cell.state.chartHeight) {
+							parameters.height = parseInt(this.cell.state.chartHeight);
+						}
+						else if (this.cell.state.height) {
 							parameters.height = parseInt(this.cell.state.height);
 						}
-						var chart = new frappe.Chart(this.$refs.chart, parameters);
+						self.chart = new frappe.Chart(this.$refs.chart, parameters);
 						this.calculateCss();
 		//				chart.export();
 						// update the entire data set (only data? not settings etc)
@@ -422,19 +476,24 @@ window.addEventListener("load", function () {
 			},
 			watch: {
 				'records': function() {
-					this.draw();	
+					if (!this.modifyingInternally) {
+						this.draw();	
+					}
+					else {
+						this.modifyingInternally = false;
+					}	
 				},
 				'cell.state.operation': function(newValue) {
 					if (newValue) {
 						if (!this.cell.state.type) {
 							this.cell.state.type = "mixed";
 						}
-						if (!this.cell.state.label) {
+						if (!this.cell.state.labelField) {
 							var self = this;
 							var definition = this.$services.data.getDefinition(this.cell.state.operation);
 							Object.keys(definition).forEach(function(key) {
-								if (!self.cell.state.label && (definition[key].type == "string" || !definition[key].type)) {
-									self.cell.state.label = key;
+								if (!self.cell.state.labelField && (definition[key].type == "string" || !definition[key].type)) {
+									self.cell.state.labelField = key;
 								}
 							});
 						}
@@ -485,7 +544,9 @@ window.addEventListener("load", function () {
 			},
 			data: function() {
 				return {
-					configuring: false
+					configuring: false,
+					modifyingInternally: false,
+					chart: null
 				}
 			},
 			beforeDestroy: function() {
@@ -513,6 +574,57 @@ window.addEventListener("load", function () {
 				this.draw();
 			},
 			methods: {
+				// TODO: pushDelete & pushUpdate?
+				pushCreate: function(record) {
+					var self = this;
+					// to avoid refactor...
+					var x = record;
+					var label = self.$services.page.getValue(x, self.cell.state.labelField);
+					if (self.cell.state.labelFormat) {
+						// want to add the state
+						var cloned = nabu.utils.objects.clone(self.cell.state.labelFormat);
+						cloned.state = x;
+						cloned.$value = self.$value;
+						label = self.$services.formatter.format(label, cloned);
+					}
+					// we need to potentially update data in situ
+					if (self.cell.state.dataset.groupBy) {
+						var index = self.chart.data.labels.indexOf(label);
+						if (index < 0) {
+							self.chart.addDataPoint(label, 1);
+						}
+						else {
+							self.chart.data.datasets[0].values[index]++;
+							self.chart.update({
+								labels: self.chart.data.labels,
+								datasets: self.chart.data.datasets
+							});
+						}
+					}
+					// just add it to records
+					else {
+						var dataset = self.cell.state.dataset;
+						var value = self.$services.page.getValue(x, dataset.value);
+						if (dataset.valueFormat) {
+							var formatty = nabu.utils.objects.clone(dataset.valueFormat);
+							formatty.state = x;
+							value = self.$services.formatter.format(value, formatty);
+						}
+						if (value == null) {
+							value = 0;
+						}
+						// does nothing?
+						//self.chart.addDataPoint(label, value);
+						self.chart.data.labels.push(label);
+						self.chart.data.datasets[0].values.push(value);
+						self.chart.update({
+							labels: self.chart.data.labels,
+							datasets: self.chart.data.datasets
+						});
+					}
+					self.modifyingInternally = true;
+					self.records.push(record);
+				},
 				configurator: function() {
 					return "frappe-aggregate-chart-configure";
 				},
@@ -577,10 +689,55 @@ window.addEventListener("load", function () {
 							// we now do the title in data common
 							// parameters.title = this.$services.page.translate(self.cell.state.title);
 						}
-						// if we have a label field, use that
-						if (this.cell.state.label) {
-							parameters.data.labels = this.records.map(function(x) {
-								var value = self.$services.page.getValue(x, self.cell.state.label);
+						if (!self.cell.state.dataset.groupBy) {
+							// if we have a label field, use that
+							if (this.cell.state.labelField) {
+								parameters.data.labels = this.records.map(function(x) {
+									var value = self.$services.page.getValue(x, self.cell.state.labelField);
+									if (self.cell.state.labelFormat) {
+										// want to add the state
+										var cloned = nabu.utils.objects.clone(self.cell.state.labelFormat);
+										cloned.state = x;
+										cloned.$value = self.$value;
+										value = self.$services.formatter.format(value, cloned);
+									}
+									return value;
+								});
+							}
+							if (this.cell.state.dataset) {
+								var datasets = [];
+								datasets.push(this.cell.state.dataset);
+								datasets.forEach(function(x) {
+									var hasData = false;
+									var values = self.records.map(function(y) {
+										var value = self.$services.page.getValue(y, x.value);
+										if (x.valueFormat) {
+											var formatty = nabu.utils.objects.clone(x.valueFormat);
+											formatty.state = y;
+											value = self.$services.formatter.format(value, formatty);
+										}
+										if (value != null) {
+											hasData = true;
+										}
+										return value == null ? 0 : value;
+									});
+									if (hasData) {
+										parameters.data.datasets.push({
+											name: self.$services.page.translate(x.name),
+											values: values
+										});
+										parameters.colors.push(x.color ? x.color : self.$services.page.getNameColor(x.name ? x.name : "unnamed" + Math.random()));
+									}
+								});
+							}
+						}
+						else {
+							var values = [];
+							var labels = [];
+							var dataset = self.cell.state.dataset;
+							this.records.forEach(function(x) {
+								// resolve label
+								var value = self.$services.page.getValue(x, self.cell.state.labelField);
 								if (self.cell.state.labelFormat) {
 									// want to add the state
 									var cloned = nabu.utils.objects.clone(self.cell.state.labelFormat);
@@ -588,34 +745,21 @@ window.addEventListener("load", function () {
 									cloned.$value = self.$value;
 									value = self.$services.formatter.format(value, cloned);
 								}
-								return value;
-							});
-						}
-						if (this.cell.state.dataset) {
-							var datasets = [];
-							datasets.push(this.cell.state.dataset);
-							datasets.forEach(function(x) {
-								var hasData = false;
-								var values = self.records.map(function(y) {
-									var value = self.$services.page.getValue(y, x.value);
-									if (x.valueFormat) {
-										var formatty = nabu.utils.objects.clone(x.valueFormat);
-										formatty.state = y;
-										value = self.$services.formatter.format(value, formatty);
-									}
-									if (value != null) {
-										hasData = true;
-									}
-									return value == null ? 0 : value;
-								});
-								if (hasData) {
-									parameters.data.datasets.push({
-										name: self.$services.page.translate(x.name),
-										values: values
-									});
-									parameters.colors.push(x.color ? x.color : self.$services.page.getNameColor(x.name ? x.name : "unnamed" + Math.random()));
+								var index = labels.indexOf(value);
+								if (index < 0) {
+									labels.push(value);
+									values.push(1);
+								}
+								else {
+									values[index]++;
 								}
 							});
+							parameters.data.labels = labels;
+							parameters.data.datasets.push({
+								name: self.$services.page.translate(dataset.name),
+								values: values
+							});
+							parameters.colors.push(dataset.color ? dataset.color : self.$services.page.getNameColor(dataset.name ? dataset.name : "unnamed" + Math.random()));
 						}
 						if (this.cell.state.barHeight) {
 							parameters.barOptions.height = parseInt(this.cell.state.barHeight);
@@ -629,10 +773,14 @@ window.addEventListener("load", function () {
 						if (this.cell.state.maxSlices) {
 							parameters.maxSlices = parseInt(this.cell.state.maxSlices);
 						}
-						if (this.cell.state.height) {
+						if (this.cell.state.chartHeight) {
+							parameters.height = parseInt(this.cell.state.chartHeight);
+						}
+						else if (this.cell.state.height) {
 							parameters.height = parseInt(this.cell.state.height);
 						}
-						var chart = new frappe.Chart(this.$refs.chart, parameters);
+						console.log("drawing", parameters);
+						self.chart = new frappe.Chart(this.$refs.chart, parameters);
 		//				chart.export();
 						// update the entire data set (only data? not settings etc)
 		//				chart.update(data);
@@ -641,7 +789,12 @@ window.addEventListener("load", function () {
 			},
 			watch: {
 				'records': function() {
-					this.draw();	
+					if (!this.modifyingInternally) {
+						this.draw();	
+					}
+					else {
+						this.modifyingInternally = false;
+					}
 				},
 				definition: function(definition) {
 					if (definition) {
@@ -650,10 +803,10 @@ window.addEventListener("load", function () {
 						}
 						var self = this;
 						// we set the label value for each field
-						if (!this.cell.state.label) {
+						if (!this.cell.state.labelField) {
 							Object.keys(definition).forEach(function(key) {
-								if (!self.cell.state.label && (definition[key].type == "string" || !definition[key].type)) {
-									self.cell.state.label = key;
+								if (!self.cell.state.labelField && (definition[key].type == "string" || !definition[key].type)) {
+									self.cell.state.labelField = key;
 								}
 							});
 						}
@@ -764,7 +917,7 @@ window.addEventListener("load", function () {
 							]
 						});
 						parameters.data.labels = [
-							self.cell.state.label ? self.$services.page.translate(self.cell.state.label) : "Value",
+							self.cell.state.labelField ? self.$services.page.translate(self.cell.state.labelField) : "Value",
 							self.cell.state.labelRemainder ? self.$services.page.translate(self.cell.state.labelRemainder) : "Remainder",
 						];
 						if (this.cell.state.barHeight) {
@@ -776,7 +929,10 @@ window.addEventListener("load", function () {
 						if (this.cell.state.navigable) {
 							parameters.isNavigable = this.cell.state.navigable;
 						}
-						if (this.cell.state.height) {
+						if (this.cell.state.chartHeight) {
+							parameters.height = parseInt(this.cell.state.chartHeight);
+						}
+						else if (this.cell.state.height) {
 							parameters.height = parseInt(this.cell.state.height);
 						}
 						var chart = new frappe.Chart(this.$refs.chart, parameters);
@@ -797,10 +953,10 @@ window.addEventListener("load", function () {
 						}
 						var self = this;
 						// we set the label value for each field
-						if (!this.cell.state.label) {
+						if (!this.cell.state.labelField) {
 							Object.keys(definition).forEach(function(key) {
-								if (!self.cell.state.label && (definition[key].type == "string" || !definition[key].type)) {
-									self.cell.state.label = key;
+								if (!self.cell.state.labelField && (definition[key].type == "string" || !definition[key].type)) {
+									self.cell.state.labelField = key;
 								}
 							});
 						}
@@ -855,6 +1011,11 @@ window.addEventListener("load", function () {
 			icon: "images/components/frappe-logo.png",
 			accept: accept,
 			initialize: initialize,
+			parameters: {
+				dynamicArray: {
+					type: Array
+				}
+			},
 			enter: function(parameters) {
 				var component = Vue.component("frappe-chart");
 				return new component({propsData:parameters});
@@ -870,6 +1031,11 @@ window.addEventListener("load", function () {
 			icon: "images/components/frappe-logo.png",
 			accept: accept,
 			initialize: initialize,
+			parameters: {
+				dynamicArray: {
+					type: Array
+				}
+			},
 			enter: function(parameters) {
 				var component = Vue.component("frappe-aggregate-chart");
 				return new component({propsData:parameters});
@@ -883,8 +1049,11 @@ window.addEventListener("load", function () {
 			name: "Frappe Percentage Chart",
 			description: "Draw a percentage chart based on a value",
 			icon: "images/components/frappe-logo.png",
-			accept: accept,
-			initialize: initialize,
+			parameters: {
+				dynamicArray: {
+					type: Array
+				}
+			},
 			enter: function(parameters) {
 				var component = Vue.component("frappe-percent-chart");
 				return new component({propsData:parameters});
