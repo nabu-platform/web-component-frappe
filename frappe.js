@@ -104,6 +104,38 @@ window.addEventListener("load", function () {
 					}
 					return value == null ? 0 : value;
 				},
+				pushUpdate: function(record, newData) {
+					var datasets = [];
+					var self = this;
+					nabu.utils.arrays.merge(datasets, this.cell.state.datasets);
+					// we want to draw bar charts first, otherwise they provide an offset for the line charts (check out frappe documentation)
+					datasets.sort(function(a, b) {
+						if (a.type == "bar" && b.type != "bar") {
+							return -1;
+						}
+						else if (b.type == "bar" && a.type != "bar") {
+							return 1;
+						}
+						return 0;
+					});
+					var values = datasets.map(function(x) {
+						return self.getRecordValue(newData, x);
+					});
+					var index = this.records.indexOf(record);
+					for (var i = 0; i < values.length; i++) {
+						self.chart.data.datasets[i].values[index] = values[i];
+					}
+					self.chart.update(self.chart.data);
+					/*self.chart.update({
+						labels: self.chart.data.labels,
+						datasets: self.chart.data.datasets,
+						yMarkers: self.chart.data.yMarkers,
+						yRegions: self.chart.data.yRegions
+					});*/ 
+				},
+				pushDelete: function(data, index) {
+					this.chart.removeDataPoint(index);
+				},
 				pushCreate: function(record) {
 					var label = this.getRecordLabel(record);
 					var self = this;
@@ -675,6 +707,9 @@ window.addEventListener("load", function () {
 							lineOptions: {},
 							axisOptions: {}
 						};
+						if (this.cell.state.chartHeight) {
+							parameters.height = parseInt(this.cell.state.chartHeight);
+						}
 						// there seems to be no configurable way to tell frappe to start at a certain point
 						// so we just add a marker at that point with no label, forcing frappe to take it into account
 						// note that if we pass in an empty array of yMarkers, frappe fails...

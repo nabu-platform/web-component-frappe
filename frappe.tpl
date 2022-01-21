@@ -165,6 +165,7 @@
 			
 			<n-form-text v-model="cell.state.minimumYValue" label="Minimum Y value"/>
 			<n-form-switch v-model="cell.state.navigable" label="Navigable" @input="draw"/>
+			<n-form-text v-model="cell.state.chartHeight" label="Chart Height" info="In pixels"/>
 			<h2>Data Set<span class="subscript">Choose the field you want to use</span></h2>
 			<n-form-text v-model="cell.state.dataset.name" label="Name" @input="draw" :timeout="600"/>
 			<n-form-combo v-model="cell.state.type" :items="['pie', 'percentage', 'donut']" label="Type" @input="draw"/>
